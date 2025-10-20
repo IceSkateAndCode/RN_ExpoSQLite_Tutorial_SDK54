@@ -31,6 +31,7 @@ export default function App() {
   const [name, setName] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [sortOrder, setSortOrder] = useState<string>("default")
 
   /**
    * Database State
@@ -51,7 +52,7 @@ export default function App() {
    * not every time loadItems function is redefined.
    */
   useEffect(() => {
-    loadItems();
+    loadItems( "default" );
   }, []);
 
   /**
@@ -67,9 +68,10 @@ export default function App() {
    *
    * @returns Promise that resolves when items are successfully loaded
    */
-  const loadItems = async () => {
+  const loadItems = async ( order: string ) => {
+    setSortOrder(order);
     try {
-      const value = await fetchItems(db);
+      const value = await fetchItems(db, order);
       setItems(value);
     } catch (err) {
       console.log("Failed to fetch items", err);
@@ -108,7 +110,7 @@ export default function App() {
       } else {
         await updateItem(db, editingId, name.trim(), parsedQuantity);
       }
-      await loadItems();
+      await loadItems(sortOrder);
       setName("");
       setQuantity("");
       setEditingId(null);
@@ -164,7 +166,7 @@ export default function App() {
         onPress: async () => {
           try {
             await deleteItem(db, id);
-            await loadItems();
+            await loadItems(sortOrder);
             if (editingId === id) {
               setEditingId(null);
               setName("");
@@ -177,6 +179,32 @@ export default function App() {
       },
     ]);
   };
+
+  const defaultSort = async () => {
+    try {
+      await loadItems("default");
+    }
+    catch (err) {
+      console.log("Failed to sort list", err)
+    }
+  }
+
+  const aToZ = async () => {
+    try {
+      await loadItems("a to z");
+    }
+    catch (err) {
+      console.log("Failed to sort list", err)
+    }
+  }
+  const zToA = async () => {
+    try {
+      await loadItems("z to a");
+    }
+    catch (err) {
+      console.log("Failed to sort list", err)
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -210,6 +238,18 @@ export default function App() {
         title={editingId === null ? "Save Item" : "Update Item"}
         onPress={saveOrUpdate}
       />
+      <Button 
+        title = {"Default Order"}
+        onPress={defaultSort}
+      />
+      <Button 
+        title={"Name A-Z"}
+        onPress={aToZ}
+      />
+      <Button
+        title={"Name Z-A"}
+        onPress={zToA}
+      />  
       <FlatList
         style={styles.list}
         data={items}
