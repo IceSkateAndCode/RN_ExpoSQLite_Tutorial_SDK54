@@ -1,3 +1,4 @@
+import AntDesign from '@expo/vector-icons/AntDesign';
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect, useState } from "react";
 import {
@@ -9,7 +10,8 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { deleteItem, fetchItems, insertItem, updateItem, type Item } from "../data/db";
+import { Dropdown } from 'react-native-element-dropdown';
+import { deleteItem, fetchItems, insertItem, sortQualityToggle, updateItem, type Item } from "../data/db";
 import ItemRow from "./components/ItemRow";
 
 export default function App() {
@@ -32,6 +34,7 @@ export default function App() {
   const [quantity, setQuantity] = useState<string>("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [sortOrder, setSortOrder] = useState<string>("default")
+  const [sortAscending, setSortAscending] = useState<boolean>(true);
 
   /**
    * Database State
@@ -40,6 +43,28 @@ export default function App() {
    * When this updates, React re-renders the FlatList to show the new data.
    */
   const [items, setItems] = useState<Item[]>([]);
+
+  const data = [ // list of options
+    {label: 'Option 1', value: '1'},
+    {label: 'Option 2', value: '2'},
+  ];
+
+
+  const [value, setValue] = useState(null);
+  const [isFocus, setIsFocus] = useState(false);
+
+
+    const renderLabel = () => { // If the dropdown is clicked, show options
+      if (value || isFocus) {
+        return (
+          <Text style={[styles.label, isFocus && { color: 'blue' }]}>
+            Options
+          </Text>
+        );
+      }
+      return null;
+    };
+
 
   /**
    * Load Items on Mount
@@ -205,6 +230,16 @@ export default function App() {
       console.log("Failed to sort list", err)
     }
   }
+  const toggleSort = async () => {
+  try {
+    const sortedItems = await sortQualityToggle(db, sortAscending);
+    setItems(sortedItems);
+    setSortAscending(!sortAscending); // Flip for next toggle
+  } catch (err) {
+    console.log("Failed to sort items", err);
+  }
+  };
+
 
   return (
     <View style={styles.container}>
@@ -250,6 +285,50 @@ export default function App() {
         title={"Name Z-A"}
         onPress={zToA}
       />  
+      {/*
+        Sort Button
+       */}
+      <Button
+        title={editingId === null ? "Sort Low to High" : "Sort High to Low"}
+        onPress={toggleSort}
+      />
+      {/*
+        Dropdown list
+        Will contain a list of options to sort the items in the list.
+        Dropdown credits: https://www.npmjs.com/package/react-native-element-dropdown
+      */}
+      <View>
+        {renderLabel()}
+        <Dropdown
+          style={[styles.dropdown, isFocus && { borderColor: 'blue' }]}
+          placeholderStyle={styles.placeholderStyle}
+          selectedTextStyle={styles.selectedTextStyle}
+          inputSearchStyle={styles.inputSearchStyle}
+          iconStyle={styles.iconStyle}
+          data={data}
+          search
+          maxHeight={300}
+          labelField="label"
+          valueField="value"
+          placeholder={!isFocus ? 'Select item' : '...'}
+          searchPlaceholder="Search..."
+          value={value}
+          onFocus={() => setIsFocus(true)}
+          onBlur={() => setIsFocus(false)}
+          onChange={item => {
+            setValue(item.value);
+            setIsFocus(false);
+          }}
+          renderLeftIcon={() => (
+            <AntDesign
+              style={styles.icon}
+              color={isFocus ? 'blue' : 'black'}
+              size={20}
+            />
+          )}
+        />
+      </View>
+
       <FlatList
         style={styles.list}
         data={items}
@@ -318,4 +397,40 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#ccc",
   },
+  dropdown: {
+      height: 65,
+      width: 200,
+      borderColor: 'gray',
+      borderWidth: 0.5,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingBottom: -5,
+    },
+    icon: {
+      marginRight: 5,
+    },
+    label: {
+      position: 'absolute',
+      backgroundColor: 'white',
+      left: 22,
+      top: 8,
+      zIndex: 999,
+      paddingHorizontal: 8,
+      fontSize: 14,
+    },
+    placeholderStyle: {
+      fontSize: 16,
+    },
+    selectedTextStyle: {
+      fontSize: 16,
+    },
+    iconStyle: {
+      width: 20,
+      height: 20,
+    },
+    inputSearchStyle: {
+      height: 40,
+      fontSize: 16,
+    },
+
 });
